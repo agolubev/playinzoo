@@ -9,7 +9,7 @@ import scala.collection.immutable
 object Global extends GlobalSettings {
 
   override def onLoadConfig(config: Configuration, path: File, classloader: ClassLoader, mode: Mode): Configuration = {
-    config ++ Configuration.from(immutable.Map("key"->"value"))
+    config ++ Configuration.from(immutable.Map("playinzoo.key"->"playinzoo.value"))
   }
 
   override def onStart(app: Application) {
