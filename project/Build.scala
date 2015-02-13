@@ -13,6 +13,8 @@ object ApplicationBuild extends Build {
     )
   )
 
+  lazy val PlayInZooSample = Project("play-in-zoo-sample",new File("./samples/playinzoo-sample")).dependsOn(PlayInZooProject)
+
   object Dependencies {
     val runtime = Seq(
       "com.typesafe.play" %% "play" % "2.2.2",
