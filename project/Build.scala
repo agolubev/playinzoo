@@ -30,7 +30,7 @@ object ApplicationBuild extends Build {
 
   object BuildSettings {
     val buildOrganization = "com.github.agolubev"
-    val buildVersion = "0.3"
+    val buildVersion = "0.1"
     val buildScalaVersion = "2.10.3"
     val buildSbtVersion = "0.13"
     val buildSettings = Defaults.defaultSettings ++ Seq(
