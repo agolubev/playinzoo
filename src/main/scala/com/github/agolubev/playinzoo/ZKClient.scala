@@ -11,12 +11,14 @@ import scala.collection.JavaConverters._
 /**
  * Created by alexandergolubev.
  */
-class ZkClient(hosts: String, root: String, timeout: Int = 3000) {
+class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[String], auth: Option[String]) {
 
   var zk: ZooKeeper = null
   val connectedSignal = new CountDownLatch(1)
+  val CONNECTION_TIMEOUT_SEC: Long = 3
 
   def connect(): Boolean = {
+
     try {
       zk = new ZooKeeper(hosts, timeout, new Watcher() {
         override def process(event: WatchedEvent): Unit =
@@ -24,7 +26,11 @@ class ZkClient(hosts: String, root: String, timeout: Int = 3000) {
             connectedSignal.countDown()
           }
       })
-      connectedSignal.await(3, TimeUnit.SECONDS)
+
+      //set auth info
+      schema.foreach(schemaName => zk.addAuthInfo(schemaName, auth.getOrElse("").getBytes))
+
+      connectedSignal.await(CONNECTION_TIMEOUT_SEC, TimeUnit.SECONDS)
     } catch {
       case e: IOException => Logger.error(e.getMessage); false
     }
@@ -43,13 +49,13 @@ class ZkClient(hosts: String, root: String, timeout: Int = 3000) {
   }
 
   def loadAttributesFromPath(path: String): Map[String, Any] = {
-    if (zk.exists(path, false) != null) {
+    if (requestZookeeper(()=>zk.exists(path, false)) != null) {
 
       val keys = requestZookeeper(() => zk.getChildren(path, false).asScala).getOrElse(List.empty)
 
       keys.flatMap(key => {
         requestZookeeper(() => zk.getData(path + "/" + key, false, null)) match {
-          case Some(k)=> key -> new String(zk.getData(path + "/" + key, false, null)) :: Nil
+          case Some(k) => key -> new String(zk.getData(path + "/" + key, false, null)) :: Nil
           case None => List.empty
         }
       }).toMap

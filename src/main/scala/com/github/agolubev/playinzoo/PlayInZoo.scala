@@ -19,9 +19,11 @@ object PlayInZoo {
         "localhost:2181"
       }),
       configuration.getString("playinzoo.root").getOrElse("/"),
-      configuration.getInt("playinzoo.timeout").getOrElse(3000)
+      configuration.getInt("playinzoo.timeout").getOrElse(3000),
+      configuration.getString("playinzoo.schema"),
+      configuration.getString("playinzoo.auth")
     )
-
+    
     if (client.connect()) {
 
       def checkPathsParam(attr: Option[String]): Map[String, Any] = attr match {
