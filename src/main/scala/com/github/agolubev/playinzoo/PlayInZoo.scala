@@ -5,7 +5,6 @@ import play.api.Configuration
 import scala.collection.JavaConverters._
 import play.api.Logger
 
-
 /**
  * Created by alexandergolubev
  */
@@ -30,7 +29,7 @@ object PlayInZoo {
       case Some(k) => client.loadAttributesFromPaths(k)
     }
 
-    val conf = Configuration(ConfigFactory.parseMap(checkPathsParam(configuration.getString("playinzoo.paths1")).asJava))
+    val conf = Configuration(ConfigFactory.parseMap(checkPathsParam(configuration.getString("playinzoo.paths")).asJava))
 
     Logger.debug("Loaded config attributes "+conf.toString)
 

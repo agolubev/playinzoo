@@ -6,7 +6,6 @@ import org.apache.zookeeper.Watcher.Event.KeeperState
 import org.apache.zookeeper.{WatchedEvent, ZooKeeper, Watcher}
 import play.api.Logger
 import scala.collection.JavaConverters._
-import scala.collection.immutable
 
 /**
  * Created by alexandergolubev.
