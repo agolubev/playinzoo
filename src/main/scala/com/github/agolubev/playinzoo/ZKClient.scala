@@ -1,5 +1,6 @@
 package com.github.agolubev.playinzoo
 
+import java.io.IOException
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 
 import org.apache.zookeeper.Watcher.Event.KeeperState
@@ -10,14 +11,23 @@ import scala.collection.JavaConverters._
 /**
  * Created by alexandergolubev.
  */
-class ZkClient(hosts: String, root: String, timeout: Int = 3000) extends Watcher {
+class ZkClient(hosts: String, root: String, timeout: Int = 3000) {
 
   var zk: ZooKeeper = null
   val connectedSignal = new CountDownLatch(1)
 
-  def connect(): Unit = {
-    zk = new ZooKeeper(hosts, timeout, this)
-    connectedSignal.await(3, TimeUnit.SECONDS)
+  def connect(): Boolean = {
+    try {
+      zk = new ZooKeeper(hosts, timeout, new Watcher() {
+        override def process(event: WatchedEvent): Unit =
+          if (event.getState() == KeeperState.SyncConnected) {
+            connectedSignal.countDown()
+          }
+      })
+      connectedSignal.await(3, TimeUnit.SECONDS)
+    } catch {
+      case e: IOException => Logger.error(e.getMessage); false
+    }
   }
 
   def loadAttributesFromPaths(paths: String): Map[String, Any] = {
@@ -37,11 +47,6 @@ class ZkClient(hosts: String, root: String, timeout: Int = 3000) extends Watcher
       Map.empty[String, Any]
     }
   }
-
-  override def process(event: WatchedEvent): Unit =
-    if (event.getState() == KeeperState.SyncConnected) {
-      connectedSignal.countDown()
-    }
 
   def close(): Unit = {
     zk.close()

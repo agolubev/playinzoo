@@ -22,22 +22,30 @@ object PlayInZoo {
       configuration.getInt("playinzoo.timeout").getOrElse(3000)
     )
 
-    client.connect()
+    if (client.connect()) {
 
-    def checkPathsParam(attr: Option[String]): Map[String, Any] = attr match {
-      case None => Logger.error("playinzoo.paths configuration attribute is not set"); Map.empty[String, Any]
-      case Some(k) => client.loadAttributesFromPaths(k)
+      def checkPathsParam(attr: Option[String]): Map[String, Any] = attr match {
+        case None => Logger.error("playinzoo.paths configuration attribute is not set"); Map.empty[String, Any]
+        case Some(k) => client.loadAttributesFromPaths(k)
+      }
+
+      val conf = Configuration(ConfigFactory.parseMap(checkPathsParam(configuration.getString("playinzoo.paths")).asJava))
+
+      Logger.debug("Loaded config attributes " + conf.toString)
+
+      client.close()
+
+      Logger.debug("Loading configuration done")
+
+      conf
+
+    } else {
+
+      Logger.error("Cannot connect to zookeeper")
+
+      Configuration.empty
+
     }
-
-    val conf = Configuration(ConfigFactory.parseMap(checkPathsParam(configuration.getString("playinzoo.paths")).asJava))
-
-    Logger.debug("Loaded config attributes "+conf.toString)
-
-    client.close()
-
-    Logger.debug("Loading configuration done")
-
-    conf
   }
 
 }
