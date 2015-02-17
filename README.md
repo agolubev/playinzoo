@@ -4,6 +4,8 @@ It's extremely useful for cloud solutions to store configuration in one place to
 
 Play 2.2 compliant.
 
+*Any suggestions about additional features are welcome.*
+
 ##Feature
  - load nodes and their data as play configuration 
  - configuration loaded from zookeeper can be used by plugins, application or play itself
@@ -35,7 +37,7 @@ To make it work you also need to add to Global object following
 ## Add PlayInZoo to your dependencies
 
 In your project/Build.scala:
-```
+```scala
 libraryDependencies ++= Seq(
   "com.github.agolubev" %% "play-in-zoo" % "0.1"
 )
@@ -47,5 +49,3 @@ You can add settings with authentication information if required:
 playinzoo.schema=digest
 playinzoo.auth="me:pass"
 ```
-
-
