@@ -31,6 +31,16 @@ To make it work you also need to add to Global object following
     config ++ PlayInZoo.loadConfiguration(config)
   }
 ```
+
+## Add PlayInZoo to your dependencies
+
+In your project/Build.scala:
+```
+libraryDependencies ++= Seq(
+  "com.github.agolubev" %% "play-in-zoo" % "0.1"
+)
+```
+
 ## Authentication
 You can add settings with authentication information if required:
 ```
