@@ -4,9 +4,9 @@ It's extremely useful for cloud solutions to store configuration in one place to
 
 Play 2.2 compliant.
 
-*Any suggestions about additional features are welcome.*
+**Any suggestions about additional features are welcome.**
 
-##Feature
+## Feature
  - load nodes and their data as play configuration 
  - configuration loaded from zookeeper can be used by plugins, application or play itself
  - you can ask to load from multiple paths
