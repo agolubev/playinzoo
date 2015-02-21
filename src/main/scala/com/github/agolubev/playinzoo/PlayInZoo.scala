@@ -21,7 +21,8 @@ object PlayInZoo {
       configuration.getString("playinzoo.root").getOrElse("/"),
       configuration.getInt("playinzoo.timeout").getOrElse(3000),
       configuration.getString("playinzoo.schema"),
-      configuration.getString("playinzoo.auth")
+      configuration.getString("playinzoo.auth"),
+      configuration.getInt("playinzoo.threads.number").getOrElse(1)
     )
     
     if (client.connect()) {

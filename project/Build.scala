@@ -9,7 +9,8 @@ object ApplicationBuild extends Build {
     settings = BuildSettings.buildSettings ++ Publishing.publishSettings ++ Seq(
       libraryDependencies := Dependencies.runtime,
       publishMavenStyle := true,
-      resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
+      resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
+      scalacOptions in Test ++= Seq("-Yrangepos")
     )
   )
 
@@ -20,12 +21,17 @@ object ApplicationBuild extends Build {
     val runtime = Seq(
       "com.typesafe.play" %% "play" % "2.2.2",
       "com.typesafe" % "config" % "1.0.2",
+    
       "ch.qos.logback" % "logback-core" % "1.0.13",
       "ch.qos.logback" % "logback-classic" % "1.0.13",
+    
       "org.scala-lang" % "scala-library" % BuildSettings.buildScalaVersion,
+    
       "org.apache.zookeeper" % "zookeeper" % "3.4.6" notTransitive() exclude("org.slf4j", "slf4j-log4j12"),
+
       "org.scalatest" %% "scalatest" % "1.9.1" % "test",
-      "org.specs2" %% "specs2" % "1.12.3" % "test"
+      "org.specs2" %% "specs2" % "1.12.3" % "test",
+      "org.mockito" % "mockito-core" % "1.9.5" % "test "
     )
   }
 
