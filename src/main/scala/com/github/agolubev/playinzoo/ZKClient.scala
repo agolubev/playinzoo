@@ -6,6 +6,7 @@ import java.util.concurrent._
 import com.github.agolubev.playinzoo.ZkClient._
 import org.apache.zookeeper.Watcher.Event.KeeperState
 import org.apache.zookeeper.{KeeperException, WatchedEvent, Watcher, ZooKeeper}
+import org.slf4j.LoggerFactory
 import play.api.Logger
 
 import scala.collection.JavaConverters._
@@ -17,7 +18,7 @@ import scala.util.{Failure, Success}
  * Created by alexander golubev.
  */
 class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[String], auth: Option[String], threadsNumber: Int) {
-
+  def logger = LoggerFactory.getLogger(this.getClass)
   var zk: ZooKeeper = null
   val CONNECTION_TIMEOUT_SEC: Long = 3
 
@@ -40,7 +41,7 @@ class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[
 
       connectedSignal.await(CONNECTION_TIMEOUT_SEC, TimeUnit.SECONDS)
     } catch {
-      case e: IOException => Logger.error(e.getMessage); false
+      case e: IOException => logger.error(e.getMessage); false
     }
   }
 
@@ -129,7 +130,7 @@ class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[
       val result = f()
       if (result == null) None else Some(result)
     } catch {
-      case e@(_: KeeperException | _: InterruptedException) => Logger.error(e.getMessage); None
+      case e@(_: KeeperException | _: InterruptedException) => logger.error(e.getMessage); None
     }
   }
 
@@ -152,19 +153,29 @@ class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[
         node
     } onComplete {
       case Success(node) => responses.add(node)
-      case Failure(e) => responses.add(node); Logger.warn(e.getMessage)
+      case Failure(e) => responses.add(node); logger.warn(e.getMessage)
     }
 
 
   // not important
-  private[playinzoo] def checkIfNodeExists(plainPath: String): Boolean =
-    requestZookeeper(() => zk.exists(plainPath, false)).map(_ != null) getOrElse (false)
+  private[playinzoo] def checkIfNodeExists(plainPath: String): Boolean ={
+    requestZookeeper(() =>{ 
+      logger.debug("Zk: exists is calling, path:"+plainPath)
+      zk.exists(plainPath, false)
+    }).map(_ != null) getOrElse (false)
+  }
 
   private[playinzoo] def getChildren(plainPath: String): List[String] =
-    requestZookeeper(() =>  zk.getChildren(plainPath, false)).getOrElse(List.empty[String].asJava).asScala.toList
+    requestZookeeper(() => {
+      logger.debug("Zk: getChildren is calling, path:"+plainPath)
+      zk.getChildren(plainPath, false)
+    }).getOrElse(List.empty[String].asJava).asScala.toList
 
   private[playinzoo] def getData(plainPath: String): Option[String] =
-    requestZookeeper(() => zk.getData(plainPath, false, null)).map(new String(_)) //todo consider encoding
+    requestZookeeper(() => {
+      logger.debug("Zk: getData is calling, path:"+plainPath)
+      zk.getData(plainPath, false, null)
+    }).map(new String(_)) //todo consider encoding
 
 
   def close(): Unit = {
