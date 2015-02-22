@@ -12,7 +12,7 @@ Play 2.2 compliant.
  - you can ask to load from multiple paths
  - support Zookeeper authentication
  - can load nodes recursively
- - supports several threads to load configuration - single thread loading by default
+ - supports several threads to load configuration - single thread loads by default
  
 ## Configure your application to use PlayInZoo
 You need to define Zookeeper hosts and paths you need to load configuration from
@@ -52,13 +52,13 @@ playinzoo.auth="me:pass"
 ```
 
 ## Loading with multiple threads
-To make multiple threads request config information you can specify number of threads in pool
+To load configuration by multiple threads you can specify number of threads in pool
 ```
-playinzoo.threads.number=3
+playinzoo.threadpool.size=3
 ```
-By default it's on thread doing loading
+By default it's one thread doing loading
 
 ## Recursive loading
 You can load configuration from the whole subtree. To do this you need to add `**` to the 
 end of a path, like `/domain/data_center/org/**`. If zookeeper node has children it consider as folder -
-only leafs are loading as name-value properties.
+only leafs are loading as name-value configuration properties.
