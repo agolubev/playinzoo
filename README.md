@@ -11,8 +11,8 @@ Play 2.2 compliant.
  - configuration loaded from zookeeper can be used by plugins, application or play itself
  - you can ask to load from multiple paths
  - support Zookeeper authentication
- - can load nodes recursively (TBD)
- - supports several threads to load configuration - single thread loading by default (TBD)
+ - can load nodes recursively
+ - supports several threads to load configuration - single thread loading by default
  
 ## Configure your application to use PlayInZoo
 You need to define Zookeeper hosts and paths you need to load configuration from
@@ -24,12 +24,13 @@ playinzoo.paths=/domain/data_center/client,/domain/data_center/org
 You can set these properties in application.conf or system properties.
 
 If you defined path as `/domain/data_center/client` than all nodes that are direct children of `client` node
-will be loaded with their values
+will be loaded with their values and shared as play configuration
 
 To make it work you also need to add to Global object following
 
 ```scala
- override def onLoadConfig(config: Configuration, path: File, classloader: ClassLoader, mode: Mode): Configuration = {
+ override def onLoadConfig(config: Configuration, path: File, 
+        classloader: ClassLoader, mode: Mode): Configuration = {
     config ++ PlayInZoo.loadConfiguration(config)
   }
 ```
@@ -49,3 +50,15 @@ You can add settings with authentication information if required:
 playinzoo.schema=digest
 playinzoo.auth="me:pass"
 ```
+
+## Loading with multiple threads
+To make multiple threads request config information you can specify number of threads in pool
+```
+playinzoo.threads.number=3
+```
+By default it's on thread doing loading
+
+## Recursive loading
+You can load configuration from the whole subtree. To do this you need to add `**` to the 
+end of a path, like `/domain/data_center/org/**`. If zookeeper node has children it consider as folder -
+only leafs are loading as name-value properties.
