@@ -1,17 +1,20 @@
 package com.github.agolubev.playinzoo
 
-import java.util.concurrent.{BlockingQueue, TimeUnit, LinkedBlockingQueue}
+import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue, TimeUnit}
 
 import com.github.agolubev.playinzoo.NodeTask._
 import org.apache.zookeeper.KeeperException.NoNodeException
 import org.apache.zookeeper.ZooKeeper
 import org.apache.zookeeper.data.Stat
+import org.mockito.invocation.InvocationOnMock
+import org.mockito.stubbing.Answer
 import org.specs2.mock.Mockito
-import org.specs2.mutable.{After, Before, Specification}
+import org.specs2.mutable.{After, Specification}
+
 import scala.collection.JavaConverters._
 
 /**
- * Created by alexandergolubev
+ * Created by alexander golubev
  */
 class ZkClientSpec extends Specification with Mockito {
 
@@ -149,6 +152,52 @@ class ZkClientSpec extends Specification with Mockito {
 
       there was no(zk).getData(path, false, null)
     }
+
+    "Load via loop recursively" in new releaseMocks {
+      val path = "/a/b/**"
+      val client = spy(new ZkClient("", "", 3, None, None, 1))
+
+      org.mockito.Mockito.doAnswer(new Answer[Unit] {
+        def answer(invocation: InvocationOnMock): Unit = {
+          val node = invocation.getArguments()(0).asInstanceOf[Node]
+          val queue = invocation.getArguments()(1).asInstanceOf[BlockingQueue[Node]]
+          node.path + node.name match {
+            case "/a/b" => queue.put(node.loadingDone(NodeContent(List[String]("c", "d"), None)))
+            case "/a/b/c" => queue.put(node.loadingDone(NodeContent(Nil, Some("c_value"))))
+            case "/a/b/d" => queue.add(node.loadingDone(NodeContent(List[String]("e", "f"), None)))
+            case "/a/b/d/e" => queue.add(node.loadingDone(NodeContent(Nil, Some("e_value"))))
+            case "/a/b/d/f" => queue.add(node.loadingDone(NodeContent(Nil, Some("f_value"))))
+            case path: String => failure("Node " + path + " must not be requested")
+          }
+
+        }
+      }).when(client).loadAttributesFromPath(any[Node], any[BlockingQueue[Node]])
+
+      val map = client.loadingLoop(List[String](path))
+      map === Map("c" -> "c_value", "e" -> "e_value", "f" -> "f_value")
+    }
+
+    "Load via loop all children of given node" in new releaseMocks {
+      val path = "/a/b"
+      val client = spy(new ZkClient("", "", 3, None, None, 1))
+
+      org.mockito.Mockito.doAnswer(new Answer[Unit] {
+        def answer(invocation: InvocationOnMock): Unit = {
+          val node = invocation.getArguments()(0).asInstanceOf[Node]
+          val queue = invocation.getArguments()(1).asInstanceOf[BlockingQueue[Node]]
+          node.path + node.name match {
+            case "/a/b" => queue.put(node.loadingDone(NodeContent(List[String]("c", "d"), None)))
+            case "/a/b/c" => queue.put(node.loadingDone(NodeContent(Nil, Some("c_value"))))
+            case "/a/b/d" => queue.add(node.loadingDone(NodeContent(Nil, Some("d_value"))))
+            case path: String => failure("Node " + path + " must not be requested")
+          }
+
+        }
+      }).when(client).loadAttributesFromPath(any[Node], any[BlockingQueue[Node]])
+
+      val map = client.loadingLoop(List[String](path))
+      map === Map("c" -> "c_value", "d" -> "d_value")
+    }
   }
 
   def createZKClient(zk: ZooKeeper) = {
@@ -162,11 +211,6 @@ class ZkClientSpec extends Specification with Mockito {
     node.loaded === true
     node.task === task
     node.content === content
-  }
-
-  trait PrepareClientStub extends Before {
-    val client = new ZkClient("", "", 3, None, None, 1)
-
   }
 
   trait releaseMocks extends After {

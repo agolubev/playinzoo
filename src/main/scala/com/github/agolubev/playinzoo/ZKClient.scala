@@ -19,6 +19,7 @@ import scala.util.{Failure, Success}
  */
 class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[String], auth: Option[String], threadsNumber: Int) {
   def logger = LoggerFactory.getLogger(this.getClass)
+
   var zk: ZooKeeper = null
   val CONNECTION_TIMEOUT_SEC: Long = 3
 
@@ -63,7 +64,7 @@ class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[
    * @param paths
    * @return
    */
-  def loadingLoop(paths: List[String]): Map[String, Any] = {
+  protected[playinzoo] def loadingLoop(paths: List[String]): Map[String, Any] = {
     import NodeTask._
 
     var readProperties = new mutable.HashMap[String, Any]()
@@ -81,30 +82,35 @@ class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[
     var node: Node = null
 
     while ( {
-      node = zkLoadingResult.take(); node
+      node = zkLoadingResult.take()
+      node
     } != null) {
+      if (node.loaded) runningFutures.remove(node.getFullPath())
+
       //TODO consider adding here a timeout
       node.task match {
         case SimpleRoot =>
           if (node.loaded) loadChildren(node, SimpleLeaf) else loadAttributesHelper2(node)
         case Recursive =>
-          if (node.loaded)
+          if (node.loaded) {
             node.content.foreach(content =>
               if (content.children.isEmpty) // if it's leaf
-                node.content.foreach(c => readProperties += c.getAsProperty(node.name))
+                addNodeContentAsProperty(node)
               else //it's node
                 loadChildren(node, Recursive))
+          }
           else loadAttributesHelper2(node)
-        case SimpleLeaf => node.content.foreach(c => readProperties += c.getAsProperty(node.name))
-
+        case SimpleLeaf => addNodeContentAsProperty(node)
       }
+
+      def addNodeContentAsProperty(node: Node) =
+        node.content.foreach(c => c.getAsProperty(node.name).foreach(readProperties += _))
 
       def loadChildren(node: Node, task: NodeTask): Unit =
         node.content.foreach(content =>
-          for (childFullPath <- content.children) {
-            runningFutures.add(childFullPath)
-            val (path, name) = getNodeNameAndPath(childFullPath)
-            loadAttributesHelper(path, name, task)
+          for (childName <- content.children) {
+            runningFutures.add(node.getFullPath() + "/" + childName)
+            loadAttributesHelper(node.getFullPath() + "/", childName, task) //TODO check if ZK required train slash
           }
         )
 
@@ -118,9 +124,7 @@ class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[
         loadAttributesFromPath(node, zkLoadingResult)
       }
 
-      runningFutures.remove(node.getFullPath())
       if (runningFutures.size == 0) return readProperties.toMap
-
     }
     readProperties.toMap
   }
@@ -137,17 +141,20 @@ class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[
   def loadAttributesFromPath(node: Node, responses: BlockingQueue[Node]) =
     future {
       import NodeTask._
+      
+      logger.debug("Requesting info for node " + node.getFullPath() + " from ZK in thread " + Thread.currentThread().getName())
+      
       if (checkIfNodeExists(node.getFullPath()))
         node.task match {
-          case SimpleRoot => node.loadingDone(Some(NodeContent(getChildren(node.getFullPath()), None)))
+          case SimpleRoot => node.loadingDone(NodeContent(getChildren(node.getFullPath()), None))
           case Recursive => {
             val children = getChildren(node.getFullPath())
             if (children.isEmpty)
-              node.loadingDone(Some(NodeContent(children, getData(node.getFullPath()))))
+              node.loadingDone(NodeContent(children, getData(node.getFullPath())))
             else
-              node.loadingDone(Some(NodeContent(children, None)))
+              node.loadingDone(NodeContent(children, None))
           }
-          case SimpleLeaf => node.loadingDone(Some(NodeContent(List.empty, getData(node.getFullPath()))))
+          case SimpleLeaf => node.loadingDone(NodeContent(List.empty, getData(node.getFullPath())))
         }
       else
         node
@@ -158,22 +165,22 @@ class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[
 
 
   // not important
-  private[playinzoo] def checkIfNodeExists(plainPath: String): Boolean ={
-    requestZookeeper(() =>{ 
-      logger.debug("Zk: exists is calling, path:"+plainPath)
+  private[playinzoo] def checkIfNodeExists(plainPath: String): Boolean = {
+    requestZookeeper(() => {
+      logger.debug("Zk: exists is calling, path:" + plainPath)
       zk.exists(plainPath, false)
     }).map(_ != null) getOrElse (false)
   }
 
   private[playinzoo] def getChildren(plainPath: String): List[String] =
     requestZookeeper(() => {
-      logger.debug("Zk: getChildren is calling, path:"+plainPath)
+      logger.debug("Zk: getChildren is calling, path:" + plainPath)
       zk.getChildren(plainPath, false)
     }).getOrElse(List.empty[String].asJava).asScala.toList
 
   private[playinzoo] def getData(plainPath: String): Option[String] =
     requestZookeeper(() => {
-      logger.debug("Zk: getData is calling, path:"+plainPath)
+      logger.debug("Zk: getData is calling, path:" + plainPath)
       zk.getData(plainPath, false, null)
     }).map(new String(_)) //todo consider encoding
 
@@ -211,9 +218,9 @@ sealed case class Node(path: String, name: String, task: NodeTask.Value, var loa
 
   def getFullPath() = generateFullPath(path, name)
 
-  def loadingDone(c: Option[NodeContent]): Node = {
+  def loadingDone(c: NodeContent): Node = {
     loaded = true
-    content = c
+    content = Some(c)
     this
   }
 }
@@ -221,7 +228,7 @@ sealed case class Node(path: String, name: String, task: NodeTask.Value, var loa
 sealed case class NodeContent(children: List[String], value: Option[String]) {
   def isLeaf() = children.isEmpty
 
-  def getAsProperty(name: String) = name -> value
+  def getAsProperty(name: String) = value.map(name -> _)
 }
 
 object NodeTask extends Enumeration {
