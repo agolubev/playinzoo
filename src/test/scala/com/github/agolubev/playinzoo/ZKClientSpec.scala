@@ -37,11 +37,22 @@ class ZkClientSpec extends Specification with Mockito {
     }
   }
 
-  //assuming we have hierarchy
+  // assuming we have hierarchy
   // /a/b(b_value) -> c (c_value)
   //               -> d (d_value) -> e (e_value)
   //                              -> f (f_value)
 
+  val b_path = "/a/b"
+  val c_path = "/a/b/c"
+  val d_path = "/a/b/d"
+  val e_path = "/a/b/d/e"
+  val f_path = "/a/b/d/f"
+
+  val b_value = "b_value"
+  val c_value = "c_value"
+  val d_value = "d_value"
+  val e_value = "e_value"
+  val f_value = "f_value"
 
   "ZKClient simple zk methods" should {
 
@@ -50,13 +61,13 @@ class ZkClientSpec extends Specification with Mockito {
       val client = createZKClient(zk)
 
 
-      zk.getChildren("/a/b", false) returns List[String]("c", "d").asJava
-      zk.exists("/a/b/c", false) returns mock[Stat]
-      zk.getData("/a/b/c", false, null) returns "c_value".getBytes
+      zk.getChildren(b_path, false) returns List[String]("c", "d").asJava
+      zk.exists(c_path, false) returns mock[Stat]
+      zk.getData(c_path, false, null) returns c_value.getBytes
 
-      client.getChildren("/a/b") === "c" :: "d" :: Nil
-      client.getData("/a/b/c") === Some("c_value")
-      client.checkIfNodeExists("/a/b/c") === true
+      client.getChildren(b_path) === "c" :: "d" :: Nil
+      client.getData(c_path) === Some(c_value)
+      client.checkIfNodeExists(c_path) === true
     }
 
     "Return empty or false if no such node" in new releaseMocks {
@@ -105,56 +116,49 @@ class ZkClientSpec extends Specification with Mockito {
 
     "Load leaf in recursive mode" in new releaseMocks {
       val zkLoadingResult = new LinkedBlockingQueue[Node]()
-      val path = "/a/b"
-      val value = "b_value"
       val zk = mock[ZooKeeper]
       val client = createZKClient(zk)
 
-      zk.exists(path, false) returns mock[Stat]
-      zk.getData(path, false, null) returns value.getBytes
+      zk.exists(b_path, false) returns mock[Stat]
+      zk.getData(b_path, false, null) returns b_value.getBytes
 
       client.loadAttributesFromPath(new Node("/a/", "b", SimpleLeaf, false, None), zkLoadingResult)
 
-      verifyNode(zkLoadingResult, SimpleLeaf, Some(NodeContent(List(), Some(value))))
+      verifyNode(zkLoadingResult, SimpleLeaf, Some(NodeContent(List(), Some(b_value))))
 
-      there was no(zk).getChildren(path, false)
+      there was no(zk).getChildren(b_path, false)
     }
 
     "Load leaf in recursive mode" in new releaseMocks {
       val zkLoadingResult = new LinkedBlockingQueue[Node]()
-      val path = "/a/b/c"
-      val value = "c_value"
       val zk = mock[ZooKeeper]
       val client = createZKClient(zk)
 
-      zk.exists(path, false) returns mock[Stat]
-      zk.getChildren(path, false) returns List[String]().asJava
-      zk.getData(path, false, null) returns value.getBytes
+      zk.exists(c_path, false) returns mock[Stat]
+      zk.getChildren(c_path, false) returns List[String]().asJava
+      zk.getData(c_path, false, null) returns c_value.getBytes
 
-      client.loadAttributesFromPath(new Node("/a/b/", "c", Recursive, false, None), zkLoadingResult)
+      client.loadAttributesFromPath(new Node(b_path, "c", Recursive, false, None), zkLoadingResult)
 
-      verifyNode(zkLoadingResult, Recursive, Some(NodeContent(List(), Some(value))))
-
+      verifyNode(zkLoadingResult, Recursive, Some(NodeContent(List(), Some(c_value))))
     }
 
     "Load non leaf node in recursive mode" in new releaseMocks {
       val zkLoadingResult = new LinkedBlockingQueue[Node]()
-      val path = "/a/b/d"
       val zk = mock[ZooKeeper]
       val client = createZKClient(zk)
 
-      zk.exists(path, false) returns mock[Stat]
-      zk.getChildren(path, false) returns List[String]("e", "f").asJava
+      zk.exists(d_path, false) returns mock[Stat]
+      zk.getChildren(d_path, false) returns List[String]("e", "f").asJava
 
-      client.loadAttributesFromPath(new Node("/a/b/", "d", Recursive, false, None), zkLoadingResult)
+      client.loadAttributesFromPath(new Node(b_path, "d", Recursive, false, None), zkLoadingResult)
 
       verifyNode(zkLoadingResult, Recursive, Some(NodeContent(List("e", "f"), None)))
 
-      there was no(zk).getData(path, false, null)
+      there was no(zk).getData(d_path, false, null)
     }
 
     "Load via loop recursively" in new releaseMocks {
-      val path = "/a/b/**"
       val client = spy(new ZkClient("", "", 3, None, None, 1))
 
       org.mockito.Mockito.doAnswer(new Answer[Unit] {
@@ -162,23 +166,22 @@ class ZkClientSpec extends Specification with Mockito {
           val node = invocation.getArguments()(0).asInstanceOf[Node]
           val queue = invocation.getArguments()(1).asInstanceOf[BlockingQueue[Node]]
           node.path + node.name match {
-            case "/a/b" => queue.put(node.loadingDone(NodeContent(List[String]("c", "d"), None)))
-            case "/a/b/c" => queue.put(node.loadingDone(NodeContent(Nil, Some("c_value"))))
-            case "/a/b/d" => queue.add(node.loadingDone(NodeContent(List[String]("e", "f"), None)))
-            case "/a/b/d/e" => queue.add(node.loadingDone(NodeContent(Nil, Some("e_value"))))
-            case "/a/b/d/f" => queue.add(node.loadingDone(NodeContent(Nil, Some("f_value"))))
+            case `b_path` => queue.put(node.loadingDone(NodeContent(List[String]("c", "d"), None)))
+            case `c_path` => queue.put(node.loadingDone(NodeContent(Nil, Some(c_value))))
+            case `d_path` => queue.add(node.loadingDone(NodeContent(List[String]("e", "f"), None)))
+            case `e_path` => queue.add(node.loadingDone(NodeContent(Nil, Some(e_value))))
+            case `f_path` => queue.add(node.loadingDone(NodeContent(Nil, Some(f_value))))
             case path: String => failure("Node " + path + " must not be requested")
           }
 
         }
       }).when(client).loadAttributesFromPath(any[Node], any[BlockingQueue[Node]])
 
-      val map = client.loadingLoop(List[String](path))
-      map === Map("c" -> "c_value", "e" -> "e_value", "f" -> "f_value")
+      val map = client.loadingLoop(List[String]("/a/b/**"))
+      map === Map("c" -> c_value, "e" -> e_value, "f" -> f_value)
     }
 
     "Load via loop all children of given node" in new releaseMocks {
-      val path = "/a/b"
       val client = spy(new ZkClient("", "", 3, None, None, 1))
 
       org.mockito.Mockito.doAnswer(new Answer[Unit] {
@@ -186,17 +189,17 @@ class ZkClientSpec extends Specification with Mockito {
           val node = invocation.getArguments()(0).asInstanceOf[Node]
           val queue = invocation.getArguments()(1).asInstanceOf[BlockingQueue[Node]]
           node.path + node.name match {
-            case "/a/b" => queue.put(node.loadingDone(NodeContent(List[String]("c", "d"), None)))
-            case "/a/b/c" => queue.put(node.loadingDone(NodeContent(Nil, Some("c_value"))))
-            case "/a/b/d" => queue.add(node.loadingDone(NodeContent(Nil, Some("d_value"))))
+            case `b_path` => queue.put(node.loadingDone(NodeContent(List[String]("c", "d"), None)))
+            case `c_path` => queue.put(node.loadingDone(NodeContent(Nil, Some(c_value))))
+            case `d_path` => queue.add(node.loadingDone(NodeContent(Nil, Some(d_value))))
             case path: String => failure("Node " + path + " must not be requested")
           }
 
         }
       }).when(client).loadAttributesFromPath(any[Node], any[BlockingQueue[Node]])
 
-      val map = client.loadingLoop(List[String](path))
-      map === Map("c" -> "c_value", "d" -> "d_value")
+      val map = client.loadingLoop(List[String](b_path))
+      map === Map("c" -> c_value, "d" -> d_value)
     }
   }
 
