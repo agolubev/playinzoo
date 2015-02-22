@@ -1,4 +1,5 @@
-# PlayInZoo configuration management ![Build Status](https://travis-ci.org/agolubev/playinzoo.svg?branch=master)
+# PlayInZoo configuration management 
+[![Build Status](https://travis-ci.org/agolubev/playinzoo.svg?branch=master) [![Coverage Status](https://coveralls.io/repos/agolubev/playinzoo/badge.svg?branch=master)](https://coveralls.io/r/agolubev/playinzoo?branch=master)
 This is a helper for play application to load configuration from zookeeper on server startup.
 It's extremely useful for cloud solutions to store configuration in one place to be available from anywhere.
 

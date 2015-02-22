@@ -1,5 +1,7 @@
+import org.scoverage.coveralls.CoverallsPlugin
 import sbt._
 import Keys._
+import CoverallsPlugin.CoverallsKeys._
 
 object ApplicationBuild extends Build {
 
@@ -7,13 +9,15 @@ object ApplicationBuild extends Build {
     "play-in-zoo",
     new File("."),
     settings = BuildSettings.buildSettings ++ Publishing.publishSettings ++ Seq(
-      libraryDependencies := Dependencies.runtime,
+      libraryDependencies ++= Dependencies.runtime,
       publishMavenStyle := true,
       resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
-      scalacOptions in Test ++= Seq("-Yrangepos")
+      scalacOptions in Test ++= Seq("-Yrangepos"),
+      coverallsTokenFile := "./token.txt"
     )
   )
 
+  
   lazy val PlayInZooSample = Project("play-in-zoo-sample", new File("./samples/playinzoo-sample")).dependsOn(PlayInZooProject)
 
   
@@ -69,7 +73,7 @@ object ApplicationBuild extends Build {
     val buildOrganization = "com.github.agolubev"
     val buildVersion = "0.1"
     val buildScalaVersion = "2.10.3"
-    val buildSbtVersion = "0.13"
+    val buildSbtVersion = "0.13.5"
     val buildSettings = Defaults.defaultSettings ++ Seq(
       organization := buildOrganization,
       version := buildVersion,
