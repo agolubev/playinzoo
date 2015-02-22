@@ -20,19 +20,19 @@ class ZkClientSpec extends Specification with Mockito {
 
   "Utility methods" should {
 
-    "split path and name" in {
+    "Split path and name" in {
       ZkClient.getNodeNameAndPath("/a/b/c") ===("/a/b/", "c")
       ZkClient.getNodeNameAndPath("/a/b/c/") ===("/a/b/", "c")
     }
 
-    "split name and path in case of root" in {
+    "Split name and path" in {
       ZkClient.parsePathForRecursiveness("/a/b/c/*") ===("/a/b/c/", false)
       ZkClient.parsePathForRecursiveness("/a/b/c/") ===("/a/b/c/", false)
 
       ZkClient.parsePathForRecursiveness("/a/b/c/**") ===("/a/b/c/", true)
     }
 
-    "not split name and path if more then two stars" in {
+    "Not split name and path if more then two stars" in {
       ZkClient.parsePathForRecursiveness( """/a/b/c/****""") ===( """/a/b/c/****""", false)
     }
   }
@@ -56,7 +56,7 @@ class ZkClientSpec extends Specification with Mockito {
 
   "ZKClient simple zk methods" should {
 
-    "Run operations successfully" in new releaseMocks {
+    "Run zookeeper requests successfully" in new releaseMocks {
       val zk = mock[ZooKeeper]
       val client = createZKClient(zk)
 
@@ -85,7 +85,7 @@ class ZkClientSpec extends Specification with Mockito {
       client.checkIfNodeExists(path) === false
     }
 
-    "Return none if zk return exception" in new releaseMocks {
+    "Return None if zk returns exception" in new releaseMocks {
       val zk = mock[ZooKeeper]
       val client = createZKClient(zk)
 
@@ -114,7 +114,7 @@ class ZkClientSpec extends Specification with Mockito {
       there was no(zk).getData(path, false, null)
     }
 
-    "Load leaf in recursive mode" in new releaseMocks {
+    "Load leaf in simple mode" in new releaseMocks {
       val zkLoadingResult = new LinkedBlockingQueue[Node]()
       val zk = mock[ZooKeeper]
       val client = createZKClient(zk)
@@ -143,7 +143,7 @@ class ZkClientSpec extends Specification with Mockito {
       verifyNode(zkLoadingResult, Recursive, Some(NodeContent(List(), Some(c_value))))
     }
 
-    "Load non leaf node in recursive mode" in new releaseMocks {
+    "Load children of folder node in recursive mode" in new releaseMocks {
       val zkLoadingResult = new LinkedBlockingQueue[Node]()
       val zk = mock[ZooKeeper]
       val client = createZKClient(zk)
@@ -181,7 +181,7 @@ class ZkClientSpec extends Specification with Mockito {
       map === Map("c" -> c_value, "e" -> e_value, "f" -> f_value)
     }
 
-    "Load via loop all children of given node" in new releaseMocks {
+    "Load via loop all children of given node in simple mode" in new releaseMocks {
       val client = spy(new ZkClient("", "", 3, None, None, 1))
 
       org.mockito.Mockito.doAnswer(new Answer[Unit] {
