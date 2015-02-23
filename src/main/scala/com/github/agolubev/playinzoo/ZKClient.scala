@@ -244,8 +244,6 @@ sealed case class Node(path: String, name: String, task: NodeTask.Value, var loa
 }
 
 sealed case class NodeContent(children: List[String], value: Option[String]) {
-  def isLeaf() = children.isEmpty
-
   def getAsProperty(name: String) = value.map(name -> _)
 }
 
