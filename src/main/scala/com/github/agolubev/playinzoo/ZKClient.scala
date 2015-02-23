@@ -59,7 +59,7 @@ class ZkClient(val hosts: String,
       close()
       Some(result)
     } else {
-      logger.error("Can not connect to Zookeeper")
+      logger.error("Can not connect to ZooKeeper")
       None
     }
   }
