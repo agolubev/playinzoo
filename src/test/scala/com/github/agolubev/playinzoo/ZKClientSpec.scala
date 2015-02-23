@@ -4,7 +4,8 @@ import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue, TimeUnit}
 
 import com.github.agolubev.playinzoo.NodeTask._
 import org.apache.zookeeper.KeeperException.NoNodeException
-import org.apache.zookeeper.ZooKeeper
+import org.apache.zookeeper.Watcher.Event.{EventType, KeeperState}
+import org.apache.zookeeper.{WatchedEvent, Watcher, ZooKeeper}
 import org.apache.zookeeper.data.Stat
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
@@ -201,6 +202,40 @@ class ZkClientSpec extends Specification with Mockito {
       val map = client.loadingLoop(List[String](b_path))
       map === Map("c" -> c_value, "d" -> d_value)
     }
+
+
+    "Execute in context of Zookeeper connection" in new releaseMocks {
+      val zkClient = spy(new ZkClient("", "", 3, Some("schema"), Some("auth"), 1))
+      
+      val zk = mock[ZooKeeper]
+
+      org.mockito.Mockito.doReturn(true).when(zkClient).connect()
+      org.mockito.Mockito.doNothing().when(zkClient).close()
+      org.mockito.Mockito.doReturn(Map(b_path->b_value)).when(zkClient).loadingLoop(any[List[String]])
+
+      zkClient.executeWithZk(()=>zkClient.loadAttributesFromPaths("/a/b")) === Some(Map(b_path->b_value))
+      there were 1.times(zkClient).loadingLoop(any[List[String]])
+      there were 1.times(zkClient).connect()
+      there were 1.times(zkClient).close()
+    }
+
+    "Connect to zookeeper syncronouzly" in new releaseMocks {
+     val zkClient = spy(new ZkClient("", "", 3, Some("schema"), Some("auth"), 1))
+      
+      val zk = mock[ZooKeeper]
+
+      org.mockito.Mockito.doAnswer(new Answer[ZooKeeper] {
+        def answer(invocation: InvocationOnMock): ZooKeeper = {
+          val watcher = invocation.getArguments()(2).asInstanceOf[Watcher]
+          watcher.process(new WatchedEvent(EventType.None, KeeperState.SyncConnected, ""))
+          zk
+        }
+      }).when(zkClient).newZooKeeperClient(any[String], any[Int], any[Watcher])
+
+      zkClient.connect() === true
+      there were 1.times(zk).addAuthInfo(any[String],any[Array[Byte]])
+    }
+
   }
 
   def createZKClient(zk: ZooKeeper) = {

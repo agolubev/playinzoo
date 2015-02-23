@@ -33,7 +33,7 @@ class ZkClient(val hosts: String,
     val connectedSignal = new CountDownLatch(1)
 
     try {
-      zk = FactoryHelper.newZooKeeperClient(hosts, timeout, new Watcher() {
+      zk = newZooKeeperClient(hosts, timeout, new Watcher() {
         override def process(event: WatchedEvent): Unit =
           if (event.getState() == KeeperState.SyncConnected) {
             connectedSignal.countDown()
@@ -49,6 +49,9 @@ class ZkClient(val hosts: String,
       case e: IOException => logger.error(e.getMessage); false
     }
   }
+
+  protected[playinzoo] def newZooKeeperClient(connectString: String, sessionTimeout: Int, watcher: Watcher): ZooKeeper =
+    new ZooKeeper(connectString, sessionTimeout, watcher)
 
   def executeWithZk[A](f: () => A): Option[A] = {
     if (connect) {
@@ -80,7 +83,7 @@ class ZkClient(val hosts: String,
    * @return
    */
   protected[playinzoo] def loadingLoop(paths: List[String]): Map[String, Any] = {
-    import com.github.agolubev.playinzoo.NodeTask._
+    import NodeTask._
 
     var readProperties = new mutable.HashMap[String, Any]()
     val zkLoadingResult = new LinkedBlockingQueue[Node]()
@@ -155,7 +158,7 @@ class ZkClient(val hosts: String,
 
   def loadAttributesFromPath(node: Node, responses: BlockingQueue[Node]) =
     future {
-      import com.github.agolubev.playinzoo.NodeTask._
+      import NodeTask._
 
       logger.debug("Requesting info for node " + node.getFullPath() + " from ZK in thread " + Thread.currentThread().getName())
 
@@ -207,11 +210,6 @@ class ZkClient(val hosts: String,
 }
 
 object ZkClient {
-
-  object FactoryHelper {
-    def newZooKeeperClient(connectString: String, sessionTimeout: Int, watcher: Watcher): ZooKeeper =
-      new ZooKeeper(connectString, sessionTimeout, watcher)
-  }
 
   def getNodeNameAndPath(plainPath: String): (String, String) = {
     val path = if (plainPath.endsWith("/")) plainPath dropRight (1)
