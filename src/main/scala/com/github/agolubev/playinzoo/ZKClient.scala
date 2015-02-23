@@ -99,10 +99,7 @@ class ZkClient(val hosts: String,
 
     var node: Node = null
 
-    while ( {
-      node = zkLoadingResult.take()
-      node
-    } != null) {
+    while ( { node = zkLoadingResult.take(); node } != null) {
       if (node.loaded) runningFutures.remove(node.getFullPath())
 
       //TODO consider adding here a timeout
