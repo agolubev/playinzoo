@@ -57,7 +57,7 @@ class PlayInZooSpec extends Specification with Mockito {
       
     }
 
-    "return empty config if not paths specified" in {
+    "Return empty config if not paths specified" in {
       val newMap = configMap - "playinzoo.paths"
 
       val playInZoo: PlayInZoo =
@@ -70,6 +70,13 @@ class PlayInZooSpec extends Specification with Mockito {
       playInZoo.loadConfiguration() === Configuration.empty
 
       there was no(zkClient).loadingLoop(any)
+    }
+
+    "Add localhost to config if it's not specified" in {
+      val newMap = configMap - "playinzoo.hostss"
+      val zkClient: ZkClient =
+        new PlayInZoo(Configuration(ConfigFactory.parseMap(newMap.asJava))).newInstanceZkClient()
+      zkClient.hosts === configMap.get("playinzoo.hosts").get
     }
   }
 }
