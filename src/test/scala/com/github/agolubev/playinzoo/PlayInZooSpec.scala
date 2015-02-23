@@ -73,7 +73,7 @@ class PlayInZooSpec extends Specification with Mockito {
     }
 
     "Add localhost to config if it's not specified" in {
-      val newMap = configMap - "playinzoo.hostss"
+      val newMap = configMap - "playinzoo.hosts"
       val zkClient: ZkClient =
         new PlayInZoo(Configuration(ConfigFactory.parseMap(newMap.asJava))).newInstanceZkClient()
       zkClient.hosts === configMap.get("playinzoo.hosts").get
