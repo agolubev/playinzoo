@@ -17,16 +17,20 @@ import scala.util.{Failure, Success}
 /**
  * Created by alexander golubev.
  */
-class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[String], auth: Option[String], threadsNumber: Int) {
+class ZkClient(val hosts: String, 
+               val root: String, 
+               val timeout: Int, 
+               val schema: Option[String],
+               val auth: Option[String], 
+               val threadsNumber: Int) {
   def logger = LoggerFactory.getLogger(this.getClass)
 
   var zk: ZooKeeper = null
-  val CONNECTION_TIMEOUT_SEC: Long = 3
 
   // set thread number for futures pool
   implicit val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(threadsNumber))
 
-  def connect(): Boolean = {
+  protected[playinzoo] def connect(): Boolean = {
     val connectedSignal = new CountDownLatch(1)
 
     try {
@@ -40,9 +44,20 @@ class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[
       //set auth info
       schema.foreach(schemaName => zk.addAuthInfo(schemaName, auth.getOrElse("").getBytes))
 
-      connectedSignal.await(CONNECTION_TIMEOUT_SEC, TimeUnit.SECONDS)
+      connectedSignal.await(timeout, TimeUnit.MILLISECONDS)
     } catch {
       case e: IOException => logger.error(e.getMessage); false
+    }
+  }
+
+  def executeWithZk[A](f: () => A): Option[A] = {
+    if (connect) {
+      val result = f()
+      close()
+      Some(result)
+    } else {
+      logger.error("Can not connect to Zookeeper")
+      None
     }
   }
 
@@ -141,9 +156,9 @@ class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[
   def loadAttributesFromPath(node: Node, responses: BlockingQueue[Node]) =
     future {
       import NodeTask._
-      
+
       logger.debug("Requesting info for node " + node.getFullPath() + " from ZK in thread " + Thread.currentThread().getName())
-      
+
       if (checkIfNodeExists(node.getFullPath()))
         node.task match {
           case SimpleRoot => node.loadingDone(NodeContent(getChildren(node.getFullPath()), None))
@@ -185,7 +200,7 @@ class ZkClient(hosts: String, root: String, timeout: Int = 3000, schema: Option[
     }).map(new String(_)) //todo consider encoding
 
 
-  def close(): Unit = {
+  protected[playinzoo] def close(): Unit = {
     zk.close()
   }
 
