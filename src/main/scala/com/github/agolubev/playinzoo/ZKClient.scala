@@ -5,9 +5,8 @@ import java.util.concurrent._
 
 import com.github.agolubev.playinzoo.ZkClient._
 import org.apache.zookeeper.Watcher.Event.KeeperState
-import org.apache.zookeeper.{KeeperException, WatchedEvent, Watcher, ZooKeeper}
+import org.apache.zookeeper._
 import org.slf4j.LoggerFactory
-import play.api.Logger
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -17,11 +16,11 @@ import scala.util.{Failure, Success}
 /**
  * Created by alexander golubev.
  */
-class ZkClient(val hosts: String, 
-               val root: String, 
-               val timeout: Int, 
+class ZkClient(val hosts: String,
+               val root: String,
+               val timeout: Int,
                val schema: Option[String],
-               val auth: Option[String], 
+               val auth: Option[String],
                val threadsNumber: Int) {
   def logger = LoggerFactory.getLogger(this.getClass)
 
@@ -34,7 +33,7 @@ class ZkClient(val hosts: String,
     val connectedSignal = new CountDownLatch(1)
 
     try {
-      zk = new ZooKeeper(hosts, timeout, new Watcher() {
+      zk = FactoryHelper.newZooKeeperClient(hosts, timeout, new Watcher() {
         override def process(event: WatchedEvent): Unit =
           if (event.getState() == KeeperState.SyncConnected) {
             connectedSignal.countDown()
@@ -45,6 +44,7 @@ class ZkClient(val hosts: String,
       schema.foreach(schemaName => zk.addAuthInfo(schemaName, auth.getOrElse("").getBytes))
 
       connectedSignal.await(timeout, TimeUnit.MILLISECONDS)
+
     } catch {
       case e: IOException => logger.error(e.getMessage); false
     }
@@ -80,7 +80,7 @@ class ZkClient(val hosts: String,
    * @return
    */
   protected[playinzoo] def loadingLoop(paths: List[String]): Map[String, Any] = {
-    import NodeTask._
+    import com.github.agolubev.playinzoo.NodeTask._
 
     var readProperties = new mutable.HashMap[String, Any]()
     val zkLoadingResult = new LinkedBlockingQueue[Node]()
@@ -155,7 +155,7 @@ class ZkClient(val hosts: String,
 
   def loadAttributesFromPath(node: Node, responses: BlockingQueue[Node]) =
     future {
-      import NodeTask._
+      import com.github.agolubev.playinzoo.NodeTask._
 
       logger.debug("Requesting info for node " + node.getFullPath() + " from ZK in thread " + Thread.currentThread().getName())
 
@@ -207,6 +207,11 @@ class ZkClient(val hosts: String,
 }
 
 object ZkClient {
+
+  object FactoryHelper {
+    def newZooKeeperClient(connectString: String, sessionTimeout: Int, watcher: Watcher): ZooKeeper =
+      new ZooKeeper(connectString, sessionTimeout, watcher)
+  }
 
   def getNodeNameAndPath(plainPath: String): (String, String) = {
     val path = if (plainPath.endsWith("/")) plainPath dropRight (1)
