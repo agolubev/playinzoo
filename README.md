@@ -16,6 +16,7 @@ Play 2.2 compliant.
  - support Zookeeper authentication
  - can load nodes recursively
  - supports several threads to load configuration - single thread loads by default
+ - zookeeper node names convert to path expressions (per TypeSafe Config) and node data to Strings
  
 ## Configure your application to use PlayInZoo
 You need to define Zookeeper hosts and paths you need to load configuration from
