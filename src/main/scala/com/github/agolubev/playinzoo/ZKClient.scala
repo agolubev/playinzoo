@@ -24,7 +24,7 @@ class ZkClient(val hosts: String,
                val threadsNumber: Int) {
   def logger = LoggerFactory.getLogger(this.getClass)
 
-  var zk: ZooKeeper = null
+  protected[playinzoo] var zk: ZooKeeper = null
 
   // set thread number for futures pool
   implicit val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(threadsNumber))
@@ -53,6 +53,12 @@ class ZkClient(val hosts: String,
   protected[playinzoo] def newZooKeeperClient(connectString: String, sessionTimeout: Int, watcher: Watcher): ZooKeeper =
     new ZooKeeper(connectString, sessionTimeout, watcher)
 
+  /**
+   *
+   * @param f function to execute within open zk connection
+   * @tparam A
+   * @return
+   */
   def executeWithZk[A](f: () => A): Option[A] = {
     if (connect) {
       val result = f()
@@ -64,7 +70,7 @@ class ZkClient(val hosts: String,
     }
   }
 
-  def loadAttributesFromPaths(paths: String): Map[String, Any] =
+  def loadAttributesFromPaths(paths: String): Map[String, mutable.WrappedArray[Byte]] =
     loadingLoop(paths.split(",").map(_ trim).toList)
 
   /**
@@ -82,10 +88,10 @@ class ZkClient(val hosts: String,
    * @param paths
    * @return
    */
-  protected[playinzoo] def loadingLoop(paths: List[String]): Map[String, Any] = {
+  protected[playinzoo] def loadingLoop(paths: List[String]): Map[String, mutable.WrappedArray[Byte]] = {
     import NodeTask._
 
-    var readProperties = new mutable.HashMap[String, Any]()
+    var readProperties = new mutable.HashMap[String, mutable.WrappedArray[Byte]]()
     val zkLoadingResult = new LinkedBlockingQueue[Node]()
     val runningFutures = new mutable.HashSet[String]()
 
@@ -153,7 +159,7 @@ class ZkClient(val hosts: String,
     }
   }
 
-  def loadAttributesFromPath(node: Node, responses: BlockingQueue[Node]) =
+  private[playinzoo] def loadAttributesFromPath(node: Node, responses: BlockingQueue[Node]) =
     future {
       import NodeTask._
 
@@ -180,25 +186,22 @@ class ZkClient(val hosts: String,
 
 
   // not important
-  private[playinzoo] def checkIfNodeExists(plainPath: String): Boolean = {
-    requestZookeeper(() => {
-      logger.debug("Zk: exists is calling, path:" + plainPath)
-      zk.exists(plainPath, false)
-    }).map(_ != null) getOrElse (false)
-  }
+  def checkIfNodeExists(plainPath: String): Boolean = requestZookeeper(() => {
+    logger.debug("Zk: exists is calling, path:" + plainPath)
+    zk.exists(plainPath, false)
+  }).map(_ != null) getOrElse false
 
-  private[playinzoo] def getChildren(plainPath: String): List[String] =
+  def getChildren(plainPath: String): List[String] =
     requestZookeeper(() => {
       logger.debug("Zk: getChildren is calling, path:" + plainPath)
       zk.getChildren(plainPath, false)
     }).getOrElse(List.empty[String].asJava).asScala.toList
 
-  private[playinzoo] def getData(plainPath: String): Option[String] =
+  def getData(plainPath: String): Option[mutable.WrappedArray[Byte]] =
     requestZookeeper(() => {
       logger.debug("Zk: getData is calling, path:" + plainPath)
       zk.getData(plainPath, false, null)
-    }).map(new String(_)) //todo consider encoding
-
+    })
 
   protected[playinzoo] def close(): Unit = {
     zk.close()
@@ -240,7 +243,7 @@ sealed case class Node(path: String, name: String, task: NodeTask.Value, var loa
   }
 }
 
-sealed case class NodeContent(children: List[String], value: Option[String]) {
+sealed case class NodeContent(children: List[String], value: Option[mutable.WrappedArray[Byte]]) {
   def getAsProperty(name: String) = value.map(name -> _)
 }
 

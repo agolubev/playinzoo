@@ -41,7 +41,7 @@ class PlayInZooSpec extends Specification with Mockito {
 
       val zkClient = mock[ZkClient]
       
-      zkClient.loadAttributesFromPaths("/a/b") returns Map("b" -> "b_value")
+      zkClient.loadAttributesFromPaths("/a/b") returns Map("b" -> "b_value".getBytes("UTF-8"))
 
       org.mockito.Mockito.doReturn(zkClient).when(playInZoo).newInstanceZkClient()
       org.mockito.Mockito.doAnswer(new Answer[Option[Config]] {

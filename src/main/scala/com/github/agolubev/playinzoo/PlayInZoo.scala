@@ -1,9 +1,8 @@
 package com.github.agolubev.playinzoo
 
-import com.typesafe.config.{Config, ConfigFactory}
-import play.api.Configuration
-import scala.collection.JavaConverters._
-import play.api.Logger
+import com.typesafe.config.ConfigFactory
+import play.api.{Configuration, Logger}
+import collection.JavaConversions._
 
 /**
  * Created by alexandergolubev
@@ -33,13 +32,21 @@ protected[playinzoo] class PlayInZoo(configuration: Configuration) {
   )
 
   def loadConfiguration(): Configuration = {
-    configuration.getString("playinzoo.paths").foldLeft(Configuration.empty)((emptyConfig, paths) => {
-      val client = newInstanceZkClient()
+    configuration.getString("playinzoo.paths").foldLeft(Configuration.empty)(
+      (emptyConfig, paths) => loadConfigurationAux(emptyConfig, paths)
+    )
+  }
 
-      client.executeWithZk(() => ConfigFactory.parseMap(client.loadAttributesFromPaths(paths).asJava)) match {
-        case Some(config) => Configuration(config)
-        case None => emptyConfig
-      }
-    })
+  private def loadConfigurationAux(emptyConfig: Configuration, paths: String): Configuration = {
+    val client = newInstanceZkClient()
+    client.executeWithZk(() => ConfigFactory.parseMap(
+      loadConfigIntoMap(client, paths))) match {
+      case Some(config) => Configuration(config)
+      case None => emptyConfig
+    }
+  }
+
+  private def loadConfigIntoMap(client: ZkClient, paths: String): java.util.Map[String, AnyRef] = {
+    client.loadAttributesFromPaths(paths).map { case (key, value) => (key, new String(value.toArray, "UTF-8"))}
   }
 }

@@ -1,5 +1,6 @@
 package com.github.agolubev.playinzoo
 
+import java.util
 import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue, TimeUnit}
 
 import com.github.agolubev.playinzoo.NodeTask._
@@ -13,11 +14,14 @@ import org.specs2.mock.Mockito
 import org.specs2.mutable.{After, Specification}
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 /**
  * Created by alexander golubev
  */
 class ZkClientSpec extends Specification with Mockito {
+
+  val ENC = "UTF-8";
 
   "Utility methods" should {
 
@@ -67,7 +71,7 @@ class ZkClientSpec extends Specification with Mockito {
       zk.getData(c_path, false, null) returns c_value.getBytes
 
       client.getChildren(b_path) === "c" :: "d" :: Nil
-      client.getData(c_path) === Some(c_value)
+      client.getData(c_path) === Some(wrap(c_value))
       client.checkIfNodeExists(c_path) === true
     }
 
@@ -121,11 +125,11 @@ class ZkClientSpec extends Specification with Mockito {
       val client = createZKClient(zk)
 
       zk.exists(b_path, false) returns mock[Stat]
-      zk.getData(b_path, false, null) returns b_value.getBytes
+      zk.getData(b_path, false, null) returns b_value.getBytes(ENC)
 
       client.loadAttributesFromPath(new Node("/a/", "b", SimpleLeaf, false, None), zkLoadingResult)
 
-      verifyNode(zkLoadingResult, SimpleLeaf, Some(NodeContent(List(), Some(b_value))))
+      verifyNode(zkLoadingResult, SimpleLeaf, Some(NodeContent(List(), Some(wrap(b_value)))))
 
       there was no(zk).getChildren(b_path, false)
     }
@@ -137,11 +141,11 @@ class ZkClientSpec extends Specification with Mockito {
 
       zk.exists(c_path, false) returns mock[Stat]
       zk.getChildren(c_path, false) returns List[String]().asJava
-      zk.getData(c_path, false, null) returns c_value.getBytes
+      zk.getData(c_path, false, null) returns wrap(c_value).toArray
 
       client.loadAttributesFromPath(new Node(b_path, "c", Recursive, false, None), zkLoadingResult)
 
-      verifyNode(zkLoadingResult, Recursive, Some(NodeContent(List(), Some(c_value))))
+      verifyNode(zkLoadingResult, Recursive, Some(NodeContent(List(), Some(wrap(c_value)))))
     }
 
     "Load children of folder node in recursive mode" in new releaseMocks {
@@ -168,10 +172,10 @@ class ZkClientSpec extends Specification with Mockito {
           val queue = invocation.getArguments()(1).asInstanceOf[BlockingQueue[Node]]
           node.path + node.name match {
             case `b_path` => queue.put(node.loadingDone(NodeContent(List[String]("c", "d"), None)))
-            case `c_path` => queue.put(node.loadingDone(NodeContent(Nil, Some(c_value))))
+            case `c_path` => queue.put(node.loadingDone(NodeContent(Nil, Some(wrap(c_value)))))
             case `d_path` => queue.add(node.loadingDone(NodeContent(List[String]("e", "f"), None)))
-            case `e_path` => queue.add(node.loadingDone(NodeContent(Nil, Some(e_value))))
-            case `f_path` => queue.add(node.loadingDone(NodeContent(Nil, Some(f_value))))
+            case `e_path` => queue.add(node.loadingDone(NodeContent(Nil, Some(wrap(e_value)))))
+            case `f_path` => queue.add(node.loadingDone(NodeContent(Nil, Some(wrap(f_value)))))
             case path: String => failure("Node " + path + " must not be requested")
           }
 
@@ -179,7 +183,7 @@ class ZkClientSpec extends Specification with Mockito {
       }).when(client).loadAttributesFromPath(any[Node], any[BlockingQueue[Node]])
 
       val map = client.loadingLoop(List[String]("/a/b/**"))
-      map === Map("c" -> c_value, "e" -> e_value, "f" -> f_value)
+      map === Map("c" -> wrap(c_value), "e" -> wrap(e_value), "f" -> wrap(f_value))
     }
 
     "Load via loop all children of given node in simple mode" in new releaseMocks {
@@ -191,8 +195,8 @@ class ZkClientSpec extends Specification with Mockito {
           val queue = invocation.getArguments()(1).asInstanceOf[BlockingQueue[Node]]
           node.path + node.name match {
             case `b_path` => queue.put(node.loadingDone(NodeContent(List[String]("c", "d"), None)))
-            case `c_path` => queue.put(node.loadingDone(NodeContent(Nil, Some(c_value))))
-            case `d_path` => queue.add(node.loadingDone(NodeContent(Nil, Some(d_value))))
+            case `c_path` => queue.put(node.loadingDone(NodeContent(Nil, Some(wrap(c_value)))))
+            case `d_path` => queue.add(node.loadingDone(NodeContent(Nil, Some(wrap(d_value)))))
             case path: String => failure("Node " + path + " must not be requested")
           }
 
@@ -200,7 +204,7 @@ class ZkClientSpec extends Specification with Mockito {
       }).when(client).loadAttributesFromPath(any[Node], any[BlockingQueue[Node]])
 
       val map = client.loadingLoop(List[String](b_path))
-      map === Map("c" -> c_value, "d" -> d_value)
+      map === Map("c" -> wrap(c_value), "d" -> wrap(d_value))
     }
 
 
@@ -209,17 +213,17 @@ class ZkClientSpec extends Specification with Mockito {
 
       org.mockito.Mockito.doReturn(true).when(zkClient).connect()
       org.mockito.Mockito.doNothing().when(zkClient).close()
-      org.mockito.Mockito.doReturn(Map(b_path->b_value)).when(zkClient).loadingLoop(any[List[String]])
+      org.mockito.Mockito.doReturn(Map(b_path -> b_value)).when(zkClient).loadingLoop(any[List[String]])
 
-      zkClient.executeWithZk(()=>zkClient.loadAttributesFromPaths(b_path)) === Some(Map(b_path->b_value))
+      zkClient.executeWithZk(() => zkClient.loadAttributesFromPaths(b_path)) === Some(Map(b_path -> b_value))
       there were 1.times(zkClient).loadingLoop(any[List[String]])
       there were 1.times(zkClient).connect()
       there were 1.times(zkClient).close()
     }
 
     "Connect to zookeeper syncronouzly" in new releaseMocks {
-     val zkClient = spy(new ZkClient("", "", 3, Some("schema"), Some("auth"), 1))
-      
+      val zkClient = spy(new ZkClient("", "", 3, Some("schema"), Some("auth"), 1))
+
       val zk = mock[ZooKeeper]
 
       org.mockito.Mockito.doAnswer(new Answer[ZooKeeper] {
@@ -231,14 +235,14 @@ class ZkClientSpec extends Specification with Mockito {
       }).when(zkClient).newZooKeeperClient(any[String], any[Int], any[Watcher])
 
       zkClient.connect() === true
-      there were 1.times(zk).addAuthInfo(any[String],any[Array[Byte]])
+      there were 1.times(zk).addAuthInfo(any[String], any[Array[Byte]])
     }
 
     "Return None when problem with connection" in new releaseMocks {
       val zkClient = spy(new ZkClient("", "", 3, Some("schema"), Some("auth"), 1))
       org.mockito.Mockito.doReturn(false).when(zkClient).connect()
 
-      zkClient.executeWithZk(()=>zkClient.loadAttributesFromPaths(b_path)) === None
+      zkClient.executeWithZk(() => zkClient.loadAttributesFromPaths(b_path)) === None
       there was no(zkClient).loadAttributesFromPaths(any[String])
     }
 
@@ -256,6 +260,10 @@ class ZkClientSpec extends Specification with Mockito {
     node.task === task
     node.content === content
   }
+
+  def wrap(str: String): mutable.WrappedArray[Byte] =
+    mutable.WrappedArray.make[Byte](str.getBytes(ENC))
+
 
   trait releaseMocks extends After {
     def after = {
