@@ -2,12 +2,16 @@ package com.github.agolubev.playinzoo
 
 import com.typesafe.config.ConfigFactory
 import play.api.{Configuration, Logger}
-import collection.JavaConversions._
+
+import scala.collection.JavaConversions._
+import scala.util.control.Exception._
 
 /**
  * Created by alexandergolubev
  */
 object PlayInZoo {
+
+  val ENCODING = "UTF-8";
 
   def loadConfiguration(configuration: Configuration): Configuration = {
     Logger.debug("Loading configuration from zookeeper")
@@ -47,6 +51,15 @@ protected[playinzoo] class PlayInZoo(configuration: Configuration) {
   }
 
   private def loadConfigIntoMap(client: ZkClient, paths: String): java.util.Map[String, AnyRef] = {
-    client.loadAttributesFromPaths(paths).map { case (key, value) => (key, new String(value.toArray, "UTF-8"))}
+    client.loadAttributesFromPaths(paths).map { case (key, value) => (key, parseByteArray(value.array))}
+  }
+
+  private def parseByteArray(value: Array[Byte]): AnyRef = {
+    val str = new String(value.toArray, PlayInZoo.ENCODING)
+    catching[AnyRef](classOf[IllegalArgumentException]).opt(Boolean.box(str.toBoolean)).getOrElse(
+      catching[AnyRef](classOf[NumberFormatException]).opt(Int.box(str.toInt)).getOrElse(
+        catching(classOf[NumberFormatException]).opt(Long.box(str.toLong)).getOrElse(
+          catching[AnyRef](classOf[NumberFormatException]).opt(Double.box(str.toDouble)).getOrElse(str)
+        )))
   }
 }
