@@ -71,3 +71,24 @@ only leafs are loading as name-value configuration properties.
 ## String Encoding
 As zookeeper node data is byte[] there is configuration attribute `playinzoo.encoding` that defines 
 charset for string values. Default encoding is UTF-8.
+
+## Example
+Having following structure in Zookeeper
+```
+org - cluster + default + region (value: US)
+              |         | language (value: en)
+              |
+              | service + name (value: Mobile REST)
+                        | timeout(value: 3000)
+``` 
+you can load it into play config with paths setting:
+```
+playinzoo.paths=/org/cluster/**
+```
+In play config following attributes will appear:
+```
+region=US
+language=en
+name="Mobile REST"
+value=3000
+```
