@@ -11,7 +11,7 @@ import scala.util.control.Exception._
  */
 object PlayInZoo {
 
-  val ENCODING = "UTF-8";
+  val DEFAULT_ENCODING = "UTF-8";
 
   def loadConfiguration(configuration: Configuration): Configuration = {
     Logger.debug("Loading configuration from zookeeper")
@@ -55,7 +55,8 @@ protected[playinzoo] class PlayInZoo(configuration: Configuration) {
   }
 
   private def parseByteArray(value: Array[Byte]): AnyRef = {
-    val str = new String(value.toArray, PlayInZoo.ENCODING)
+    val str = new String(value.toArray, configuration.getString("playinzoo.encoding").getOrElse(PlayInZoo.DEFAULT_ENCODING))
+    
     catching[AnyRef](classOf[IllegalArgumentException]).opt(Boolean.box(str.toBoolean)).getOrElse(
       catching[AnyRef](classOf[NumberFormatException]).opt(Int.box(str.toInt)).getOrElse(
         catching(classOf[NumberFormatException]).opt(Long.box(str.toLong)).getOrElse(

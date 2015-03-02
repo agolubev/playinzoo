@@ -67,3 +67,7 @@ By default it's one thread doing loading
 You can load configuration from the whole subtree. To do this you need to add `**` to the 
 end of a path, like `/domain/data_center/org/**`. If zookeeper node has children it consider as folder -
 only leafs are loading as name-value configuration properties.
+
+## String Encoding
+As zookeeper node data is byte[] there is configuration attribute `playinzoo.encoding` that defines 
+charset for string values. Default encoding is UTF-8.
