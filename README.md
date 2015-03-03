@@ -43,9 +43,8 @@ To make it work you also need to add to Global object following
 ## Add PlayInZoo to your dependencies
 In your project/Build.scala:
 ```scala
-libraryDependencies ++= Seq(
-  "com.github.agolubev" %% "play-in-zoo" % "0.1"
-)
+resolvers += "Sonatype Releases" at "http://oss.sonatype.org/content/repositories/releases"
+libraryDependencies += "com.github.agolubev" %% "play-in-zoo" % "0.3"
 ```
 
 ## Authentication
