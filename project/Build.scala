@@ -16,10 +16,8 @@ object ApplicationBuild extends Build {
       coverallsTokenFile := "./token.txt"
     )
   )
-
   
   lazy val PlayInZooSample = Project("play-in-zoo-sample", new File("./samples/playinzoo-sample")).dependsOn(PlayInZooProject)
-
   
   object Dependencies {
     val runtime = Seq(
@@ -66,12 +64,11 @@ object ApplicationBuild extends Build {
             </developer>
           </developers>)
      )
-    
   }
 
   object BuildSettings {
     val buildOrganization = "com.github.agolubev"
-    val buildVersion = "0.1"
+    val buildVersion = "0.3"
     val buildScalaVersion = "2.10.3"
     val buildSbtVersion = "0.13.5"
     val buildSettings = Defaults.defaultSettings ++ Seq(
