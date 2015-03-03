@@ -24,12 +24,12 @@ You need to define Zookeeper hosts and paths you need to load configuration from
 
 ```
 playinzoo.hosts=127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002
-playinzoo.paths=/domain/data_center/client,/domain/data_center/org
+playinzoo.paths=/domain/data_center/client
 ```
 You can set these properties in application.conf or system properties.
 
 If you defined path as `/domain/data_center/client` than all nodes that are direct children of `client` node
-will be loaded with their values and shared as play configuration
+will be loaded along with their values and shared as play configuration
 
 To make it work you also need to add to Global object following
 
@@ -41,7 +41,6 @@ To make it work you also need to add to Global object following
 ```
 
 ## Add PlayInZoo to your dependencies
-
 In your project/Build.scala:
 ```scala
 libraryDependencies ++= Seq(
@@ -68,6 +67,17 @@ You can load configuration from the whole subtree. To do this you need to add `*
 end of a path, like `/domain/data_center/org/**`. If zookeeper node has children it consider as folder -
 only leafs are loading as name-value configuration properties.
 
+## Attributes overriding - sequential and parallel loading
+Obviously attributes with the same name will override each other and it depends on loading order who wins.
+You can ask to load configuration from zk folders in parallel by dividing paths with coma, or specify 
+to load sequentially by using "->".
+
+In following example `default_log` and `default_int` will be loaded in parallel. Then configuration for 
+http_service will be loaded and override attributes from default settings.
+```
+playinzoo.paths="/org/cluster/default_log,/org/cluster/default_int->/org/cluster/http_service"
+```
+
 ## String Encoding
 As zookeeper node data is byte[] there is configuration attribute `playinzoo.encoding` that defines 
 charset for string values. Default encoding is UTF-8.
@@ -87,8 +97,8 @@ playinzoo.paths=/org/cluster/**
 ```
 In play config following attributes will appear:
 ```
-region=US
-language=en
+region="US"
+language="en"
 name="Mobile REST"
-value=3000
+value=3000 //integer
 ```

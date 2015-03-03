@@ -70,8 +70,16 @@ class ZkClient(val hosts: String,
     }
   }
 
+  /**
+   * Split paths to List of List. External lists are loading sequentially while elements of internal
+   * lists may be loaded in parallel
+   * @param paths string of type "a,b->c"
+   * @return
+   */
   def loadAttributesFromPaths(paths: String): Map[String, mutable.WrappedArray[Byte]] =
-    loadingLoop(paths.split(",").map(_ trim).toList)
+    paths.split("->").map(_ trim).foldLeft(mutable.Map.empty[String, mutable.WrappedArray[Byte]])(
+      (map, parallelPaths) => map ++= loadingLoop(parallelPaths.split(",").map(_ trim).toList)
+    ).toMap
 
   /**
    * Scenario 1 - simple 
@@ -105,7 +113,9 @@ class ZkClient(val hosts: String,
 
     var node: Node = null
 
-    while ( { node = zkLoadingResult.take(); node } != null) {
+    while ( {
+      node = zkLoadingResult.take(); node
+    } != null) {
       if (node.loaded) runningFutures.remove(node.getFullPath())
 
       //TODO consider adding here a timeout
