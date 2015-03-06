@@ -5,7 +5,7 @@
 This is a helper for play application to load configuration from zookeeper on server startup.
 It's extremely useful for cloud solutions to store configuration in one place to be available from anywhere.
 
-Play 2.2 compliant.
+Scala 2.10, 2.11; Play 2.2, 2.3 compliant.
 
 **Any suggestions about additional features are welcome.**
 
