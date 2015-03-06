@@ -77,8 +77,8 @@ class ZkClient(val hosts: String,
    * @return
    */
   def loadAttributesFromPaths(paths: String): Map[String, mutable.WrappedArray[Byte]] =
-    paths.split("->").map(_ trim).foldLeft(mutable.Map.empty[String, mutable.WrappedArray[Byte]])(
-      (map, parallelPaths) => map ++= loadingLoop(parallelPaths.split(",").map(_ trim).toList)
+    paths.split("->").map(_.trim).foldLeft(mutable.Map.empty[String, mutable.WrappedArray[Byte]])(
+      (map, parallelPaths) => map ++= loadingLoop(parallelPaths.split(",").map(_.trim).toList)
     ).toMap
 
   /**
@@ -97,7 +97,7 @@ class ZkClient(val hosts: String,
    * @return
    */
   protected[playinzoo] def loadingLoop(paths: List[String]): Map[String, mutable.WrappedArray[Byte]] = {
-    import NodeTask._
+    import com.github.agolubev.playinzoo.NodeTask._
 
     var readProperties = new mutable.HashMap[String, mutable.WrappedArray[Byte]]()
     val zkLoadingResult = new LinkedBlockingQueue[Node]()
@@ -170,8 +170,8 @@ class ZkClient(val hosts: String,
   }
 
   private[playinzoo] def loadAttributesFromPath(node: Node, responses: BlockingQueue[Node]) =
-    future {
-      import NodeTask._
+    scala.concurrent.Future {
+      import com.github.agolubev.playinzoo.NodeTask._
 
       logger.debug("Requesting info for node " + node.getFullPath() + " from ZK in thread " + Thread.currentThread().getName())
 

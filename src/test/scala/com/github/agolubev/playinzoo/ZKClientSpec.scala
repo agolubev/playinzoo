@@ -1,6 +1,5 @@
 package com.github.agolubev.playinzoo
 
-import java.util
 import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue, TimeUnit}
 
 import com.github.agolubev.playinzoo.NodeTask._
