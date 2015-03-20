@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.concurrent._
+import scala.util.control.Exception._
 import scala.util.{Failure, Success}
 
 /**
@@ -141,7 +142,7 @@ class ZkClient(val hosts: String,
         node.content.foreach(content =>
           for (childName <- content.children) {
             runningFutures.add(node.getFullPath() + "/" + childName)
-            loadAttributesHelper(node.getFullPath() + "/", childName, task) //TODO check if ZK required train slash
+            loadAttributesHelper(node.getFullPath() + "/", childName, task) //TODO check if ZK required trail slash
           }
         )
 
@@ -213,9 +214,9 @@ class ZkClient(val hosts: String,
       zk.getData(plainPath, false, null)
     })
 
-  protected[playinzoo] def close(): Unit = {
-    zk.close()
-  }
+  protected[playinzoo] def close(): Boolean =
+    catching(classOf[InterruptedException]).withApply(e => logger.error(e.getMessage)).opt(zk.close()).isDefined
+
 
 }
 
@@ -238,7 +239,8 @@ object ZkClient {
     } else (path, false)
   }
 
-  def generateFullPath(path: String, name: String) = if (path.endsWith("/")) path + name else path + "/" + name //consider when there is slash in name
+  def generateFullPath(path: String, name: String) = 
+    if (path.endsWith("/")) path + name else path + "/" + name //consider when there is slash in name
 }
 
 

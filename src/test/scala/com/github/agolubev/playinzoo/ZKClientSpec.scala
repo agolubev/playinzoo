@@ -211,7 +211,7 @@ class ZkClientSpec extends Specification with Mockito {
       val zkClient = spy(new ZkClient("", "", 3, Some("schema"), Some("auth"), 1))
 
       org.mockito.Mockito.doReturn(true).when(zkClient).connect()
-      org.mockito.Mockito.doNothing().when(zkClient).close()
+      org.mockito.Mockito.doReturn(true).when(zkClient).close()
       org.mockito.Mockito.doReturn(Map(b_path -> b_value)).when(zkClient).loadingLoop(any[List[String]])
 
       zkClient.executeWithZk(() => zkClient.loadAttributesFromPaths(b_path)) === Some(Map(b_path -> b_value))
