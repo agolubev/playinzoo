@@ -11,7 +11,7 @@ import scala.util.control.Exception._
  */
 object PlayInZoo {
 
-  val DEFAULT_ENCODING = "UTF-8";
+  val DEFAULT_ENCODING = "UTF-8"
 
   def loadConfiguration(configuration: Configuration): Configuration = {
     Logger.debug("Loading configuration from zookeeper")
@@ -59,8 +59,8 @@ protected[playinzoo] class PlayInZoo(configuration: Configuration) {
     
     catching[AnyRef](classOf[IllegalArgumentException]).opt(Boolean.box(str.toBoolean)).getOrElse(
       catching[AnyRef](classOf[NumberFormatException]).opt(Int.box(str.toInt)).getOrElse(
-        catching(classOf[NumberFormatException]).opt(Long.box(str.toLong)).getOrElse(
-          catching[AnyRef](classOf[NumberFormatException]).opt(Double.box(str.toDouble)).getOrElse(str)
+        catching[AnyRef](classOf[NumberFormatException]).opt(Long.box(str.toLong)).getOrElse(
+          catching(classOf[NumberFormatException]).opt(Double.box(str.toDouble)).getOrElse(str)
         )))
   }
 }
