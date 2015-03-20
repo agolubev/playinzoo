@@ -20,7 +20,7 @@ import scala.collection.mutable
  */
 class ZkClientSpec extends Specification with Mockito {
 
-  val ENC = "UTF-8";
+  val ENC = "UTF-8"
 
   "Utility methods" should {
 
@@ -29,14 +29,14 @@ class ZkClientSpec extends Specification with Mockito {
       ZkClient.getNodeNameAndPath("/a/b/c/") ===("/a/b/", "c")
     }
 
-    "Split name and path" in {
+    "Parse path for recursive loading" in {
       ZkClient.parsePathForRecursiveness("/a/b/c/*") ===("/a/b/c/", false)
       ZkClient.parsePathForRecursiveness("/a/b/c/") ===("/a/b/c/", false)
 
       ZkClient.parsePathForRecursiveness("/a/b/c/**") ===("/a/b/c/", true)
     }
 
-    "Not split name and path if more then two stars" in {
+    "Do not split name and path if more then two stars" in {
       ZkClient.parsePathForRecursiveness( """/a/b/c/****""") ===( """/a/b/c/****""", false)
     }
   }
@@ -58,9 +58,9 @@ class ZkClientSpec extends Specification with Mockito {
   val e_value = "e_value"
   val f_value = "f_value"
 
-  "ZKClient simple zk methods" should {
+  "ZKClient (basic cases) " should {
 
-    "Run zookeeper requests successfully" in new releaseMocks {
+    "Run requeststo zookeeper successfully" in new releaseMocks {
       val zk = mock[ZooKeeper]
       val client = createZKClient(zk)
 
@@ -220,7 +220,7 @@ class ZkClientSpec extends Specification with Mockito {
       there were 1.times(zkClient).close()
     }
 
-    "Connect to zookeeper syncronouzly" in new releaseMocks {
+    "Connect to zookeeper synchronously" in new releaseMocks {
       val zkClient = spy(new ZkClient("", "", 3, Some("schema"), Some("auth"), 1))
 
       val zk = mock[ZooKeeper]
@@ -265,9 +265,8 @@ class ZkClientSpec extends Specification with Mockito {
 
 
   trait releaseMocks extends After {
-    def after = {
-      org.mockito.Mockito.reset()
-    }
+    def after = org.mockito.Mockito.reset()
+
   }
 
 }
